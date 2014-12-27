@@ -1,3 +1,5 @@
+#! python 3
+
 import math
 import pygame
 from pprint import pprint
@@ -30,16 +32,6 @@ gameloop = True
 while gameloop:
 	ms = clock.tick(fps)
 	playtime += ms / 1000.0
-
-	screen.fill(0)
-	rifter = pygame.transform.rotate(rifterSprite, rifterDirection - 180)
-	rifterBlitPosition = [rifterPosition[0] - rifter.get_rect().width / 2, rifterPosition[1] - rifter.get_rect().height / 2]
-	screen.blit(rifter, rifterBlitPosition)
-
-	for projectile in rifterProjectiles:
-		pygame.draw.rect(screen, (255,255,255), [int(projectileX) - 1, int(projectileY) - 1, 3, 3])
-
-	pygame.display.flip()
 
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -80,7 +72,8 @@ while gameloop:
 		rifterDirection -= 5
 		rifterRotated = True
 	if keys[4]:
-		rifterProjectiles.append((rifterPosition[0], rifterPosition[1], rifterAngle))
+		projectile = (rifterPosition[0], rifterPosition[1], math.sin(rifterAngle), math.cos(rifterAngle))
+		rifterProjectiles.append(projectile)
 		keys[4] = False;
 
 	if rifterSpeed > 4.0:
@@ -102,14 +95,26 @@ while gameloop:
 		rifterNextPosition[0] = math.sin(rifterAngle)
 		rifterNextPosition[1] = math.cos(rifterAngle)
 
-	for i, projectile in enumerate(rifterProjectiles):
-		projectile = rifterProjectiles.pop(i)
-		projectileX, projectileY = projectile[0], projectile[1]
-		if (projectileX > 0 and projectileY > 0 and 
-			projectileX < screenInfo.current_w and projectileY < screenInfo.current_h):
-			projectileX += math.sin(projectile[2]) * 10
-			projectileY += math.cos(projectile[2]) * 10
-			rifterProjectiles.append((projectileX, projectileY, projectile[2]))
+	for i in range(len(rifterProjectiles)):
+		projectile = rifterProjectiles[i]
+		p_X, p_Y, p_XN, p_YN = rifterProjectiles[i][0], rifterProjectiles[i][1], rifterProjectiles[i][2], rifterProjectiles[i][3] # current and next X,Y
+		p_X += p_XN * 10
+		p_Y += p_YN * 10
+		rifterProjectiles[i] = (p_X, p_Y, p_XN, p_YN)
 
+	for projectile in rifterProjectiles:
+		if projectile[0] < 0 or projectile[1] < 0 or projectile[0] > screenInfo.current_w or projectile[1] > screenInfo.current_h:
+			rifterProjectiles.remove(projectile)
+
+	screen.fill(0)
+	rifter = pygame.transform.rotate(rifterSprite, rifterDirection - 180)
+	rifterBlitPosition = [rifterPosition[0] - rifter.get_rect().width / 2, rifterPosition[1] - rifter.get_rect().height / 2]
+	screen.blit(rifter, rifterBlitPosition)
+
+	for projectile in rifterProjectiles:
+		pygame.draw.rect(screen, (255,255,255), [int(projectile[0]) - 1, int(projectile[1]) - 1, 3, 3])
+
+	pygame.display.flip()
+	
 pygame.quit()
 exit(0)
