@@ -13,6 +13,8 @@ def degrees_to_radians(degrees):
 pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 screenInfo = pygame.display.Info()
+screenWidth, screenHeight = screenInfo.current_w / 2, screenInfo.current_h / 2
+surface = pygame.Surface((screenWidth, screenHeight))
 clock = pygame.time.Clock()
 fps = 60
 playtime = 0.0 # seconds
@@ -103,18 +105,20 @@ while gameloop:
 		rifterProjectiles[i] = (p_X, p_Y, p_XN, p_YN)
 
 	for projectile in rifterProjectiles:
-		if projectile[0] < 0 or projectile[1] < 0 or projectile[0] > screenInfo.current_w or projectile[1] > screenInfo.current_h:
+		if projectile[0] < 0 or projectile[1] < 0 or projectile[0] > screenWidth or projectile[1] > screenHeight:
 			rifterProjectiles.remove(projectile)
 
-	screen.fill(0)
+	surface.fill(0)
 	rifter = pygame.transform.rotate(rifterSprite, rifterDirection - 180)
 	rifterBlitPosition = [rifterPosition[0] - rifter.get_rect().width / 2, rifterPosition[1] - rifter.get_rect().height / 2]
-	screen.blit(rifter, rifterBlitPosition)
+	surface.blit(rifter, rifterBlitPosition)
 
 	for projectile in rifterProjectiles:
-		pygame.draw.rect(screen, (255,255,255), [int(projectile[0]) - 1, int(projectile[1]) - 1, 3, 3])
+		pygame.draw.rect(surface, (255,255,255), [int(projectile[0]) - 1, int(projectile[1]) - 1, 3, 3])
 
-	pygame.display.flip()
+
+	pygame.transform.scale2x(surface, screen)
+	pygame.display.update()
 	
 pygame.quit()
 exit(0)
