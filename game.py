@@ -13,17 +13,17 @@ def degrees_to_radians(degrees):
 class Ship(pygame.sprite.Sprite):
 	id = 1
 	collection = {}
-	def __init__(self, start = [320, 480], direction = 0):
+	def __init__(self, start = [320,480], direction = 0):
 		self.id = Ship.id
 		Ship.id += 1
 		Ship.collection[self.id] = self
 		pygame.sprite.Sprite.__init__(self, self.groups)
 		self.x = start[0]
 		self.y = start[1]
-		self.dx = 0
-		self.dy = 0
 		self.direction = direction
 		self.angle = degrees_to_radians(direction)
+		self.dx = math.sin(self.angle)
+		self.dy = math.cos(self.angle)
 		self.sprite = pygame.image.load('resources/sprites/rifter.png')
 		self.image = self.sprite
 		self.rect = self.image.get_rect()
@@ -53,7 +53,7 @@ class Ship(pygame.sprite.Sprite):
 		if self.speed < 0.0:
 			self.speed = 0
 
-	def update(self):
+	def update(self, frametime = 0.0):
 		if self.speed > 0.0:
 			self.x += self.dx * self.speed
 			self.y += self.dy * self.speed
@@ -63,29 +63,62 @@ class Ship(pygame.sprite.Sprite):
 		self.rect.centerx = self.x
 		self.rect.centery = self.y
 
+class Projectile(pygame.sprite.Sprite):
+	lifetime_max = 10.0
+	def __init__(self, owner):
+		pygame.sprite.Sprite.__init__(self, self.groups)
+		self.lifetime = 0.0
+		self.owner = owner
+		self.x = self.owner.x
+		self.y = self.owner.y
+		self.dx = self.owner.dx
+		self.dy = self.owner.dy
+		self.direction = self.owner.direction
+		self.sprite = pygame.Surface((10,10))
+		self.sprite.fill((0,0,0))
+		pygame.draw.rect(self.sprite, (255,255,255), (4,0,1,10))
+		self.image = pygame.transform.rotate(self.sprite, self.direction - 180)
+		self.rect = self.image.get_rect()
+		self.speed = 10.0
+
+	def update(self, frametime = 0.0):
+		self.lifetime += frametime
+		if (self.lifetime > Projectile.lifetime_max):
+			self.kill()
+		self.x += self.dx * self.speed
+		self.y += self.dy * self.speed
+		self.rect.centerx = self.x
+		self.rect.centery = self.y
+
 pygame.init()
 display = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 screenInfo = pygame.display.Info()
 screenWidth, screenHeight = screenInfo.current_w / 2, screenInfo.current_h / 2
 screen = pygame.Surface((screenWidth, screenHeight))
+screen.fill((0,0,0))
+
 clock = pygame.time.Clock()
 fps = 60
 playtime = 0.0 # seconds
 
-rifterProjectiles = []
-
 keys = [False, False, False, False, False] # up, down, left, right, space
 
 shipGroup = pygame.sprite.Group()
+projectileGroup = pygame.sprite.Group()
 everythingGroup = pygame.sprite.LayeredUpdates()
-Ship.groups = shipGroup, everythingGroup
 
-player = Ship([320, 240], 0)
+Ship._layer = 10
+Projectile._layer = 5
+
+Ship.groups = shipGroup, everythingGroup
+Projectile.groups = projectileGroup, everythingGroup
+
+player = Ship([320,240], 0)
 
 gameloop = True
 while gameloop:
-	ms = clock.tick(fps)
-	playtime += ms / 1000.0
+	frametime = clock.tick(fps) / 1000
+	playtime += frametime
 
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -124,26 +157,11 @@ while gameloop:
 	elif keys[3]: # d
 		player.turn(1)
 	if keys[4]:
-		projectile = (player.x, player.y, math.sin(player.angle), math.cos(player.angle))
-		rifterProjectiles.append(projectile)
+		Projectile(player)
 		keys[4] = False;
 
-	for i in range(len(rifterProjectiles)):
-		projectile = rifterProjectiles[i]
-		p_X, p_Y, p_XN, p_YN = rifterProjectiles[i][0], rifterProjectiles[i][1], rifterProjectiles[i][2], rifterProjectiles[i][3] # current and next X,Y
-		p_X += p_XN * 10
-		p_Y += p_YN * 10
-		rifterProjectiles[i] = (p_X, p_Y, p_XN, p_YN)
-
-	for projectile in rifterProjectiles:
-		if projectile[0] < 0 or projectile[1] < 0 or projectile[0] > screenWidth or projectile[1] > screenHeight:
-			rifterProjectiles.remove(projectile)
-
-	for projectile in rifterProjectiles:
-		pygame.draw.rect(screen, (255,255,255), [int(projectile[0]) - 1, int(projectile[1]) - 1, 3, 3])
-
 	everythingGroup.clear(screen, display)
-	everythingGroup.update()
+	everythingGroup.update(frametime)
 	everythingGroup.draw(screen)
 
 	pygame.transform.scale2x(screen, display)
