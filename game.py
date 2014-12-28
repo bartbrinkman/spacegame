@@ -10,6 +10,28 @@ def radians_to_degrees(radians):
 def degrees_to_radians(degrees):
     return degrees * (math.pi / 180.0)
 
+
+class Text(pygame.sprite.Sprite):
+	id = 1
+	collection = {}
+	def __init__(self, content, position):
+		self.id = Text.id
+		Text.id += 1
+		Text.collection[self.id] = self
+		pygame.sprite.Sprite.__init__(self, self.groups)
+		self.font = pygame.font.Font(None, 14)
+		self.change(content, position)
+
+	def update(self, frametime):
+		pass
+
+	def change(self, content, position):
+		self.image = self.font.render(content, True, (255,255,255))
+		self.rect = self.image.get_rect()
+		self.rect.centerx = position[0]
+		self.rect.centery = position[1]
+
+
 class Ship(pygame.sprite.Sprite):
 	id = 1
 	collection = {}
@@ -63,6 +85,7 @@ class Ship(pygame.sprite.Sprite):
 		self.rect.centerx = self.x
 		self.rect.centery = self.y
 
+
 class Projectile(pygame.sprite.Sprite):
 	lifetime_max = 10.0
 	def __init__(self, owner):
@@ -90,6 +113,7 @@ class Projectile(pygame.sprite.Sprite):
 		self.rect.centerx = self.x
 		self.rect.centery = self.y
 
+
 pygame.init()
 display = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 screenInfo = pygame.display.Info()
@@ -103,22 +127,30 @@ playtime = 0.0 # seconds
 
 keys = [False, False, False, False, False] # up, down, left, right, space
 
+textGroup = pygame.sprite.Group()
 shipGroup = pygame.sprite.Group()
 projectileGroup = pygame.sprite.Group()
 everythingGroup = pygame.sprite.LayeredUpdates()
 
+Text._layer = 11
 Ship._layer = 10
-Projectile._layer = 5
+Projectile._layer = 9
 
+Text.groups = textGroup, everythingGroup
 Ship.groups = shipGroup, everythingGroup
 Projectile.groups = projectileGroup, everythingGroup
 
 player = Ship([320,240], 0)
+npc = Ship([400,300], 0)
+
+status = Text('game started', [screenWidth / 2, 12])
 
 gameloop = True
 while gameloop:
 	frametime = clock.tick(fps) / 1000
 	playtime += frametime
+	
+	status.change(str(round(playtime)) + ' sec', [screenWidth / 2, 12])
 
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -160,7 +192,20 @@ while gameloop:
 		Projectile(player)
 		keys[4] = False;
 
-	everythingGroup.clear(screen, display)
+
+	# move towards player
+	# move away if player has firing solution (arctangent)
+
+	npc.accelerate()
+	if abs(player.x - npc.x) < 50 and abs(player.y - npc.y) < 50:
+		npc.turn(-1)
+	else:
+		if npc.x < 50 or npc.y < 50 or npc.x > (screenWidth - 50) or npc.y > (screenHeight - 50):
+			npc.turn(1)
+	
+	
+	# everythingGroup.clear(screen, display)
+	screen.fill((0,0,0))
 	everythingGroup.update(frametime)
 	everythingGroup.draw(screen)
 
