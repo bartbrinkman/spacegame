@@ -11,7 +11,6 @@ def radians_to_degrees(radians):
 def degrees_to_radians(degrees):
     return degrees * (math.pi / 180.0)
 
-
 class Viewport:
 	def __init__(self, width, height):
 		self.width, self.height = int(width), int(height)
@@ -205,6 +204,9 @@ screenInfo = pygame.display.Info()
 screenWidth, screenHeight = screenInfo.current_w / 2, screenInfo.current_h / 2
 screen = pygame.Surface((screenWidth, screenHeight))
 screen.fill((0,0,0))
+
+EVENT_WARP = pygame.USEREVENT + 1
+EVENT_JUMP = pygame.USEREVENT + 2
 
 clock = pygame.time.Clock()
 fps = 60
