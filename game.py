@@ -11,6 +11,22 @@ def degrees_to_radians(degrees):
     return degrees * (math.pi / 180.0)
 
 
+class Viewport:
+	def __init__(self, width, height):
+		self.width, self.height = width, height
+		self.update(0,0)
+
+	def update(self, x, y):
+		self.x = x
+		self.y = y
+
+	def get_x(self, rx):
+		return (rx - self.x) + self.width / 2
+
+	def get_y(self, ry):
+		return (ry - self.y) + self.height / 2		
+
+
 class Text(pygame.sprite.Sprite):
 	id = 1
 	collection = {}
@@ -22,7 +38,7 @@ class Text(pygame.sprite.Sprite):
 		self.font = pygame.font.Font(None, 14)
 		self.change(content, position)
 
-	def update(self, frametime):
+	def update(self, viewport, frametime):
 		pass
 
 	def change(self, content, position):
@@ -35,21 +51,21 @@ class Text(pygame.sprite.Sprite):
 class Ship(pygame.sprite.Sprite):
 	id = 1
 	collection = {}
-	def __init__(self, start = [320,480], direction = 0):
+	def __init__(self, start = [0,0], direction = 0):
 		self.id = Ship.id
 		Ship.id += 1
 		Ship.collection[self.id] = self
 		pygame.sprite.Sprite.__init__(self, self.groups)
-		self.x = start[0]
-		self.y = start[1]
+		self.rx = start[0]
+		self.ry = start[1]
 		self.direction = direction
 		self.angle = degrees_to_radians(direction)
 		self.dx = math.sin(self.angle)
 		self.dy = math.cos(self.angle)
+		self.speed = 0.0
 		self.sprite = pygame.image.load('resources/sprites/rifter.png')
 		self.image = self.sprite
 		self.rect = self.image.get_rect()
-		self.speed = 0.0
 
 	def turn(self, change):
 		if (change > 0):
@@ -75,15 +91,28 @@ class Ship(pygame.sprite.Sprite):
 		if self.speed < 0.0:
 			self.speed = 0
 
-	def update(self, frametime = 0.0):
+	def update(self, viewport, frametime):
 		if self.speed > 0.0:
-			self.x += self.dx * self.speed
-			self.y += self.dy * self.speed
+			self.rx += self.dx * self.speed
+			self.ry += self.dy * self.speed
 			self.speed -= 0.1
+
+		self.x = viewport.get_x(self.rx)
+		self.y = viewport.get_y(self.ry)
 		self.image = pygame.transform.rotate(self.sprite, self.direction - 180)
 		self.rect = self.image.get_rect()
 		self.rect.centerx = self.x
 		self.rect.centery = self.y
+
+
+class Player(Ship):
+	def update(self, viewport, frametime):
+		Ship.update(self, viewport, frametime)
+		self.x = viewport.width / 2
+		self.y = viewport.height / 2
+		self.rect.centerx = self.x
+		self.rect.centery = self.y
+		viewport.update(self.rx, self.ry)
 
 
 class Projectile(pygame.sprite.Sprite):
@@ -92,24 +121,28 @@ class Projectile(pygame.sprite.Sprite):
 		pygame.sprite.Sprite.__init__(self, self.groups)
 		self.lifetime = 0.0
 		self.owner = owner
-		self.x = self.owner.x
-		self.y = self.owner.y
+		self.rx = self.owner.rx
+		self.ry = self.owner.ry
 		self.dx = self.owner.dx
 		self.dy = self.owner.dy
 		self.direction = self.owner.direction
 		self.sprite = pygame.Surface((10,10))
 		self.sprite.fill((0,0,0))
 		pygame.draw.rect(self.sprite, (255,255,255), (4,0,1,10))
+		self.x = self.owner.x
+		self.y = self.owner.y
 		self.image = pygame.transform.rotate(self.sprite, self.direction - 180)
 		self.rect = self.image.get_rect()
 		self.speed = 10.0
 
-	def update(self, frametime = 0.0):
+	def update(self, viewport, frametime):
 		self.lifetime += frametime
 		if (self.lifetime > Projectile.lifetime_max):
 			self.kill()
-		self.x += self.dx * self.speed
-		self.y += self.dy * self.speed
+		self.rx += self.dx * self.speed
+		self.ry += self.dy * self.speed
+		self.x = viewport.get_x(self.rx)
+		self.y = viewport.get_y(self.ry)
 		self.rect.centerx = self.x
 		self.rect.centery = self.y
 
@@ -124,6 +157,7 @@ screen.fill((0,0,0))
 clock = pygame.time.Clock()
 fps = 60
 playtime = 0.0 # seconds
+viewport = Viewport(screenWidth, screenHeight)
 
 keys = [False, False, False, False, False] # up, down, left, right, space
 
@@ -140,8 +174,9 @@ Text.groups = textGroup, everythingGroup
 Ship.groups = shipGroup, everythingGroup
 Projectile.groups = projectileGroup, everythingGroup
 
-player = Ship([320,240], 0)
-npc = Ship([400,300], 0)
+player = Player([0,0], 0)
+npc = Ship([20,20], 0)
+viewport.update(player.rx, player.ry)
 
 status = Text('game started', [screenWidth / 2, 12])
 
@@ -150,7 +185,7 @@ while gameloop:
 	frametime = clock.tick(fps) / 1000
 	playtime += frametime
 	
-	status.change(str(round(playtime)) + ' sec', [screenWidth / 2, 12])
+	status.change(str(round(player.rx)) + ', ' + str(round(player.ry)), [screenWidth / 2, 12])
 
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -197,16 +232,15 @@ while gameloop:
 	# move away if player has firing solution (arctangent)
 
 	npc.accelerate()
-	if abs(player.x - npc.x) < 50 and abs(player.y - npc.y) < 50:
+	if abs(player.rx - npc.rx) < 50 and abs(player.ry - npc.ry) < 50:
 		npc.turn(-1)
 	else:
-		if npc.x < 50 or npc.y < 50 or npc.x > (screenWidth - 50) or npc.y > (screenHeight - 50):
-			npc.turn(1)
+		npc.turn(1)
 	
 	
 	# everythingGroup.clear(screen, display)
 	screen.fill((0,0,0))
-	everythingGroup.update(frametime)
+	everythingGroup.update(viewport, frametime)
 	everythingGroup.draw(screen)
 
 	pygame.transform.scale2x(screen, display)
