@@ -14,7 +14,7 @@ def degrees_to_radians(degrees):
 
 class Viewport:
 	def __init__(self, width, height):
-		self.width, self.height = width, height
+		self.width, self.height = int(width), int(height)
 		self.update(0, 0, 0, 0, 0.0)
 
 	def update(self, x, y, dx, dy, v):
@@ -150,19 +150,20 @@ class Projectile(pygame.sprite.Sprite):
 		self.rect.centerx = self.x
 		self.rect.centery = self.y
 
+
 class Dust(pygame.sprite.Sprite):
 	particles = []
 	def __init__(self, viewport):
 		pygame.sprite.Sprite.__init__(self, self.groups)
 		self.viewport = viewport
-		self.tl = viewport.width - viewport.width * 1.1
-		self.tr = viewport.width * 1.1
-		self.tt = viewport.height - viewport.height * 1.1
-		self.tb = viewport.height * 1.1
-		for i in range(250):
+		self.tl = int(viewport.width - viewport.width * 1.1)
+		self.tr = int(viewport.width * 1.1)
+		self.tt = int(viewport.height - viewport.height * 1.1)
+		self.tb = int(viewport.height * 1.1)
+		for i in range(200):
 			particle = [randrange(self.tl, self.tr), 
 						randrange(self.tt, self.tb),
-						choice([0.4, 0.7, 1.0])]
+						choice([0.4, 0.4, 0.6, 0.6, 0.6, 0.8, 0.8, 1.0])]
 			self.particles.append(particle)
 		self.x = 0
 		self.y = 0
@@ -184,9 +185,11 @@ class Dust(pygame.sprite.Sprite):
 				particle[1] = randrange(self.tt, 0)
 			
 			if particle[2] >= 0.4:
-				color = (100,100,100)
-			if particle[2] >= 0.7:
-				color = (180,180,180)
+				color = (40,40,40)
+			if particle[2] >= 0.6:
+				color = (80,80,80)
+			if particle[2] >= 0.8:
+				color = (140,140,140)
 			if particle[2] >= 1.0:
 				color = (255,255,255)
 			self.image.fill(color, (particle[0],particle[1],1,1))
@@ -194,9 +197,6 @@ class Dust(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.x = 0
 		self.y = 0
-
-
-
 
 pygame.init()
 display = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
