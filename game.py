@@ -5,6 +5,31 @@ import pygame
 from random import randrange, choice
 from pprint import pprint
 
+universe = {
+	'alpha': [
+		{
+			'type': 'station',
+			'pos': [23049, 12309]
+		},
+		{
+			'type': 'gate',
+			'pos': [1230, 130913],
+			'dest': 'beta'
+		}
+	],
+	'beta': [
+		{
+			'type': 'station',
+			'pos': [13424, -35932]
+		},
+		{
+			'type': 'gate',
+			'pos': [2345, 12303],
+			'dest': 'alpha'
+		}
+	]
+}
+
 grad = math.pi / 180
 def radians_to_degrees(radians):
     return (radians / math.pi) * 180.0
@@ -38,17 +63,19 @@ class Text(pygame.sprite.Sprite):
 		Text.id += 1
 		Text.collection[self.id] = self
 		pygame.sprite.Sprite.__init__(self, self.groups)
-		self.font = pygame.font.Font(None, 14)
+		self.font = pygame.font.Font('resources/fonts/Volter__28Goldfish_29.ttf', 9)
 		self.change(content, position)
 
 	def update(self, viewport, frametime):
 		pass
 
 	def change(self, content, position):
-		self.image = self.font.render(content, True, (255,255,255))
+		self.image = self.font.render(content, False, (255,255,255))
 		self.rect = self.image.get_rect()
-		self.rect.centerx = position[0]
-		self.rect.centery = position[1]
+		self.rect.x = position[0]
+		self.rect.y = position[1]
+		# self.rect.centerx = position[0]
+		# self.rect.centery = position[1]
 
 
 class Ship(pygame.sprite.Sprite):
@@ -109,6 +136,10 @@ class Ship(pygame.sprite.Sprite):
 
 
 class Player(Ship):
+	def __init__(self, system, start = [0,0], direction = 0):
+		Ship.__init__(self, start, direction)
+		self.system = system
+
 	def update(self, viewport, frametime):
 		Ship.update(self, viewport, frametime)
 		self.x = viewport.width / 2
@@ -116,6 +147,14 @@ class Player(Ship):
 		self.rect.centerx = self.x
 		self.rect.centery = self.y
 		viewport.update(self.rx, self.ry, self.dx, self.dy, self.speed)
+
+
+class Structure(pygame.sprite.Sprite):
+	def __init__(self):
+		pygame.sprite.Sprite.__init__(self, self.groups)
+
+	def update(self, viewport, frametime):
+		pass
 
 
 class Projectile(pygame.sprite.Sprite):
@@ -198,10 +237,11 @@ class Dust(pygame.sprite.Sprite):
 		self.y = 0
 
 pygame.init()
-display = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
+# display = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
+display = pygame.display.set_mode((1280,800), pygame.FULLSCREEN)
 pygame.display.set_caption('Spacegame');
 screenInfo = pygame.display.Info()
-screenWidth, screenHeight = screenInfo.current_w / 2, screenInfo.current_h / 2
+screenWidth, screenHeight = int(screenInfo.current_w / 2), int(screenInfo.current_h / 2)
 screen = pygame.Surface((screenWidth, screenHeight))
 screen.fill((0,0,0))
 
@@ -216,6 +256,7 @@ viewport = Viewport(screenWidth, screenHeight)
 keys = [False, False, False, False, False] # up, down, left, right, space
 
 shipGroup = pygame.sprite.Group()
+structureGroup = pygame.sprite.Group()
 textGroup = pygame.sprite.Group()
 dustGroup = pygame.sprite.Group()
 projectileGroup = pygame.sprite.Group()
@@ -223,18 +264,22 @@ everythingGroup = pygame.sprite.LayeredUpdates()
 
 Text._layer = 11
 Ship._layer = 10
+Structure._layer = 10
 Projectile._layer = 9
 Dust._layer = 8
 
 Ship.groups = shipGroup, everythingGroup
+Structure.groups = structureGroup, everythingGroup
 Text.groups = textGroup, everythingGroup
 Projectile.groups = projectileGroup, everythingGroup
 Dust.groups = dustGroup, everythingGroup
 
-player = Player([0,0], 0)
+player = Player('alpha', [0,0], 0)
 viewport.update(player.rx, player.ry, player.dx, player.dy, player.speed)
 npc = Ship([20,20], 0)
-status = Text('Game started', [screenWidth / 2, 12])
+ui_status = Text('Game started', [screenWidth / 2, 5])
+ui_system_h = Text('Current system:', [8, 5])
+ui_system_p = Text(player.system, [8, 17])
 dust = Dust(viewport)
 
 gameloop = True
@@ -284,7 +329,7 @@ while gameloop:
 
 	# uncomment if spacedust feels laggy:
 	# viewport.update(player.rx, player.ry, player.dx, player.dy)
-	status.change(str(round(player.rx)) + ', ' + str(round(player.ry)), [screenWidth / 2, 12])
+	ui_status.change(str(round(player.rx)) + ', ' + str(round(player.ry)), [screenWidth / 2, 5])
 
 	# move towards player
 	# move away if player has firing solution (arctangent)
@@ -299,7 +344,7 @@ while gameloop:
 	everythingGroup.update(viewport, frametime)
 	everythingGroup.draw(screen)
 
-	pygame.transform.scale2x(screen, display)
+	pygame.transform.scale(screen, (screenInfo.current_w, screenInfo.current_h), display)
 	pygame.display.update()
 	
 pygame.quit()
