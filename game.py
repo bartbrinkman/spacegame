@@ -201,14 +201,15 @@ class Dust(pygame.sprite.Sprite):
 		for i in range(200):
 			particle = [randrange(self.tl, self.tr), 
 						randrange(self.tt, self.tb),
-						choice([0.4, 0.4, 0.6, 0.6, 0.6, 0.8, 0.8, 1.0])]
+						choice([0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.3, 0.3, 0.4, 0.5, 0.75, 1.0, 1.4, 1.8])]
 			self.particles.append(particle)
 		self.x = 0
 		self.y = 0
 
 	def update(self, viewport, frametime):
 		self.image = pygame.Surface((viewport.width, viewport.height))
-		self.image.fill((0,0,0))
+		self.image.blit(backdrop, backdrop.get_rect())
+		# self.image.fill((0,0,0))
 		for particle in self.particles:
 			particle[0] -= viewport.dx * viewport.v * particle[2]
 			particle[1] -= viewport.dy * viewport.v * particle[2]
@@ -222,14 +223,20 @@ class Dust(pygame.sprite.Sprite):
 			if particle[1] > self.tb:
 				particle[1] = randrange(self.tt, 0)
 			
-			if particle[2] >= 0.4:
+			if particle[2] >= 0.0:
+				color = (20,20,20)
+			if particle[2] >= 0.2:
 				color = (40,40,40)
-			if particle[2] >= 0.6:
+			if particle[2] >= 0.4:
 				color = (80,80,80)
-			if particle[2] >= 0.8:
-				color = (140,140,140)
+			if particle[2] >= 0.6:
+				color = (100,100,100)
 			if particle[2] >= 1.0:
-				color = (255,255,255)
+				color = (140,140,140)
+			if particle[2] >= 1.4:
+				color = (180,180,180)
+			if particle[2] >= 1.8:
+				color = (220,220,220)
 			self.image.fill(color, (particle[0],particle[1],1,1))
 
 		self.rect = self.image.get_rect()
@@ -237,13 +244,13 @@ class Dust(pygame.sprite.Sprite):
 		self.y = 0
 
 pygame.init()
-# display = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
-display = pygame.display.set_mode((1280,800), pygame.FULLSCREEN)
+display = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
+# display = pygame.display.set_mode((1280,800), pygame.FULLSCREEN)
 pygame.display.set_caption('Spacegame');
 screenInfo = pygame.display.Info()
 screenWidth, screenHeight = int(screenInfo.current_w / 2), int(screenInfo.current_h / 2)
 screen = pygame.Surface((screenWidth, screenHeight))
-screen.fill((0,0,0))
+backdrop = pygame.image.load('resources/images/bg3.png')
 
 EVENT_WARP = pygame.USEREVENT + 1
 EVENT_JUMP = pygame.USEREVENT + 2
@@ -340,7 +347,6 @@ while gameloop:
 	else:
 		npc.turn(1)
 	
-	screen.fill((0,0,0))
 	everythingGroup.update(viewport, frametime)
 	everythingGroup.draw(screen)
 
