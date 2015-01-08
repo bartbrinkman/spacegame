@@ -36,6 +36,7 @@ def radians_to_degrees(radians):
 def degrees_to_radians(degrees):
     return degrees * (math.pi / 180.0)
 
+
 class Viewport:
 	def __init__(self, width, height):
 		self.width, self.height = int(width), int(height)
@@ -53,6 +54,12 @@ class Viewport:
 
 	def get_y(self, ry):
 		return (ry - self.y) + self.height / 2
+
+	def get_player_x(self):
+		return self.x
+
+	def get_player_y(self):
+		return self.y
 
 
 class Text(pygame.sprite.Sprite):
@@ -72,10 +79,25 @@ class Text(pygame.sprite.Sprite):
 	def change(self, content, position):
 		self.image = self.font.render(content, False, (255,255,255))
 		self.rect = self.image.get_rect()
-		self.rect.x = position[0]
-		self.rect.y = position[1]
+		self.x = position[0]
+		self.y = position[1]
+		self.rect.x = self.x
+		self.rect.y = self.y
 		# self.rect.centerx = position[0]
 		# self.rect.centery = position[1]
+
+
+	def change_content(self, content):
+		self.image = self.font.render(content, False, (255,255,255))
+		self.rect = self.image.get_rect()
+		self.rect.x = self.x
+		self.rect.y = self.y
+
+	def change_position(self, position):
+		self.x = position[0]
+		self.y = position[1]
+		self.rect.x = self.x
+		self.rect.y = self.y
 
 
 class Ship(pygame.sprite.Sprite):
@@ -133,6 +155,39 @@ class Ship(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.rect.centerx = self.x
 		self.rect.centery = self.y
+
+	def __del__(self):
+		# kill anything related here (such as text sprites)
+		pass
+
+
+class AI(Ship):
+	def __init__(self, start, direction):
+		Ship.__init__(self, start, direction)
+		self.ui_label = Text('NPC', [8,30])
+
+	def update(self, viewport, frametime):
+		Ship.update(self, viewport, frametime)
+		
+		x0 = viewport.width / 2
+		y0 = viewport.height / 2
+		x1 = viewport.get_x(self.rx)
+		y1 = viewport.get_y(self.ry)
+		m = (y0 - y1) / (x0 - x1)
+		
+		x2 = 20
+		if x1 > x0:
+			x2 = viewport.width - 20
+ 
+		y2 = m * (x2 - x1) + y1
+		if y2 < 20:
+			y2 = 20
+			x2 = (y2 - y1) / m + x1
+		if y2 > viewport.height - 20:
+			y2 = viewport.height - 20
+			x2 = (y2 - y1) / m + x1
+
+		self.ui_label.change_position([x2, y2])
 
 
 class Player(Ship):
@@ -201,14 +256,14 @@ class Dust(pygame.sprite.Sprite):
 		for i in range(200):
 			particle = [randrange(self.tl, self.tr), 
 						randrange(self.tt, self.tb),
-						choice([0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.3, 0.3, 0.4, 0.5, 0.75, 1.0, 1.4, 1.8])]
+						choice([0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.3, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2.0])]
 			self.particles.append(particle)
 		self.x = 0
 		self.y = 0
 
 	def update(self, viewport, frametime):
 		self.image = pygame.Surface((viewport.width, viewport.height))
-		self.image.blit(backdrop, backdrop.get_rect())
+		# self.image.blit(backdrop, backdrop.get_rect())
 		# self.image.fill((0,0,0))
 		for particle in self.particles:
 			particle[0] -= viewport.dx * viewport.v * particle[2]
@@ -233,9 +288,9 @@ class Dust(pygame.sprite.Sprite):
 				color = (100,100,100)
 			if particle[2] >= 1.0:
 				color = (140,140,140)
-			if particle[2] >= 1.4:
+			if particle[2] >= 1.5:
 				color = (180,180,180)
-			if particle[2] >= 1.8:
+			if particle[2] >= 2.0:
 				color = (220,220,220)
 			self.image.fill(color, (particle[0],particle[1],1,1))
 
@@ -243,14 +298,15 @@ class Dust(pygame.sprite.Sprite):
 		self.x = 0
 		self.y = 0
 
+
 pygame.init()
-display = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
-# display = pygame.display.set_mode((1280,800), pygame.FULLSCREEN)
+# display = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
+display = pygame.display.set_mode((1280,800), pygame.FULLSCREEN)
 pygame.display.set_caption('Spacegame');
 screenInfo = pygame.display.Info()
 screenWidth, screenHeight = int(screenInfo.current_w / 2), int(screenInfo.current_h / 2)
 screen = pygame.Surface((screenWidth, screenHeight))
-backdrop = pygame.image.load('resources/images/bg3.png')
+# backdrop = pygame.image.load('resources/images/bg3.png')
 
 EVENT_WARP = pygame.USEREVENT + 1
 EVENT_JUMP = pygame.USEREVENT + 2
@@ -283,7 +339,7 @@ Dust.groups = dustGroup, everythingGroup
 
 player = Player('alpha', [0,0], 0)
 viewport.update(player.rx, player.ry, player.dx, player.dy, player.speed)
-npc = Ship([20,20], 0)
+npc = AI([20,20], 0)
 ui_status = Text('Game started', [screenWidth / 2, 5])
 ui_system_h = Text('Current system:', [8, 5])
 ui_system_p = Text(player.system, [8, 17])
