@@ -71,34 +71,53 @@ class Text(pygame.sprite.Sprite):
 		Text.collection[self.id] = self
 		pygame.sprite.Sprite.__init__(self, self.groups)
 		self.font = pygame.font.Font('resources/fonts/Volter__28Goldfish_29.ttf', 9)
-		self.change(content, position)
+		self.x, self.y = position[0], position[1]
+		self.setContent(content)
 
 	def update(self, viewport, frametime):
 		pass
 
-	def change(self, content, position):
-		self.image = self.font.render(content, False, (255,255,255))
-		self.rect = self.image.get_rect()
-		self.x = position[0]
-		self.y = position[1]
-		self.rect.x = self.x
-		self.rect.y = self.y
-		# self.rect.centerx = position[0]
-		# self.rect.centery = position[1]
-
-
-	def change_content(self, content):
+	def setContent(self, content):
 		self.image = self.font.render(content, False, (255,255,255))
 		self.rect = self.image.get_rect()
 		self.rect.x = self.x
 		self.rect.y = self.y
 
-	def change_position(self, position):
+	def setPosition(self, position):
 		self.x = position[0]
 		self.y = position[1]
 		self.rect.x = self.x
 		self.rect.y = self.y
 
+class OffscreenLabel(Text):
+	def __init__(self, content, object):
+		self.object = object
+		Text.__init__(self, content, [-999,-999])
+
+	def update(self, viewport, frametime):
+		x0 = viewport.width / 2
+		y0 = viewport.height / 2
+		x1 = viewport.get_x(self.object.rx)
+		y1 = viewport.get_y(self.object.ry)
+
+		if x1 > 0 and x1 < viewport.width and y1 > 0 and y1 < viewport.height:
+			self.setPosition([-900,-900])
+			return
+
+		m = (y0 - y1) / (x0 - x1)
+		x2 = 1
+		if x1 > x0:
+			x2 = viewport.width - self.rect.width - 1
+		y2 = m * (x2 - x1) + y1
+		
+		if y2 < 1:
+			y2 = 1
+			x2 = (y2 - y1) / m + x1
+		if y2 > viewport.height - self.rect.height - 1:
+			y2 = viewport.height - self.rect.height - 1
+			x2 = (y2 - y1) / m + x1
+
+		self.setPosition([x2, y2])
 
 class Ship(pygame.sprite.Sprite):
 	id = 1
@@ -164,31 +183,11 @@ class Ship(pygame.sprite.Sprite):
 class AI(Ship):
 	def __init__(self, start, direction):
 		Ship.__init__(self, start, direction)
-		self.ui_label = Text('NPC', [8,30])
+		self.offscreenLabel = OffscreenLabel('NPC', self)
 
 	def update(self, viewport, frametime):
 		Ship.update(self, viewport, frametime)
 		
-		x0 = viewport.width / 2
-		y0 = viewport.height / 2
-		x1 = viewport.get_x(self.rx)
-		y1 = viewport.get_y(self.ry)
-		m = (y0 - y1) / (x0 - x1)
-		
-		x2 = 20
-		if x1 > x0:
-			x2 = viewport.width - 20
- 
-		y2 = m * (x2 - x1) + y1
-		if y2 < 20:
-			y2 = 20
-			x2 = (y2 - y1) / m + x1
-		if y2 > viewport.height - 20:
-			y2 = viewport.height - 20
-			x2 = (y2 - y1) / m + x1
-
-		self.ui_label.change_position([x2, y2])
-
 
 class Player(Ship):
 	def __init__(self, system, start = [0,0], direction = 0):
@@ -392,7 +391,7 @@ while gameloop:
 
 	# uncomment if spacedust feels laggy:
 	# viewport.update(player.rx, player.ry, player.dx, player.dy)
-	ui_status.change(str(round(player.rx)) + ', ' + str(round(player.ry)), [screenWidth / 2, 5])
+	ui_status.setContent(str(round(player.rx)) + ', ' + str(round(player.ry)))
 
 	# move towards player
 	# move away if player has firing solution (arctangent)
