@@ -100,7 +100,7 @@ class OffscreenLabel(Text):
 		x1 = viewport.get_x(self.object.rx)
 		y1 = viewport.get_y(self.object.ry)
 
-		if x1 > 0 and x1 < viewport.width and y1 > 0 and y1 < viewport.height:
+		if (x1 + self.object.rect.width) > 0 and x1 < viewport.width and (y1 + self.object.rect.height) > 0 and y1 < viewport.height:
 			self.setPosition([-900,-900])
 			return
 
@@ -209,6 +209,22 @@ class Structure(pygame.sprite.Sprite):
 
 	def update(self, viewport, frametime):
 		pass
+
+class Station(Structure):
+	def __init__(self, name, position):
+		Structure.__init__(self)
+		self.rx = position[0]
+		self.ry = position[1]
+		self.sprite = pygame.image.load('resources/sprites/outpost.png')
+		self.image = self.sprite
+		self.offscreenLabel = OffscreenLabel(name, self)
+
+	def update(self, viewport, frametime):
+		self.x = viewport.get_x(self.rx)
+		self.y = viewport.get_y(self.ry)
+		self.rect = self.image.get_rect()
+		self.rect.x = self.x
+		self.rect.y = self.y
 
 
 class Projectile(pygame.sprite.Sprite):
@@ -326,7 +342,7 @@ everythingGroup = pygame.sprite.LayeredUpdates()
 
 Text._layer = 11
 Ship._layer = 10
-Structure._layer = 10
+Structure._layer = 9
 Projectile._layer = 9
 Dust._layer = 8
 
@@ -339,6 +355,7 @@ Dust.groups = dustGroup, everythingGroup
 player = Player('alpha', [0,0], 0)
 viewport.update(player.rx, player.ry, player.dx, player.dy, player.speed)
 npc = AI([20,20], 0)
+outpost = Station('Outpost 3A', [-120,-400])
 ui_status = Text('Game started', [screenWidth / 2, 5])
 ui_system_h = Text('Current system:', [8, 5])
 ui_system_p = Text(player.system, [8, 17])
